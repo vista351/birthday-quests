@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest System</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #090b0f;
+            color: #e8e8e8;
+            font-family: "Courier New", monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        .terminal {
+            width: 100%;
+            max-width: 620px;
+            background: #10141a;
+            border: 1px solid #29313b;
+            border-radius: 14px;
+            padding: 26px;
+            box-shadow: 0 0 40px rgba(0,0,0,.5);
+        }
+
+        .header {
+            font-size: 13px;
+            letter-spacing: 3px;
+            color: #8b96a5;
+            margin-bottom: 25px;
+        }
+
+        .title {
+            font-size: 25px;
+            font-weight: bold;
+            margin-bottom: 25px;
+        }
+
+        .status {
+            margin: 13px 0;
+            line-height: 1.5;
+        }
+
+        .ok {
+            color: #71e69a;
+        }
+
+        .warning {
+            color: #ffd166;
+        }
+
+        .error {
+            color: #ff6961;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 12px;
+            background: #242a32;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 20px 0 8px;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0%;
+            background: #e8e8e8;
+            transition: width .7s ease;
+        }
+
+        .percentage {
+            text-align: right;
+            color: #9ba5b2;
+            margin-bottom: 25px;
+        }
+
+        button {
+            width: 100%;
+            border: 1px solid #596573;
+            background: transparent;
+            color: white;
+            padding: 15px;
+            margin-top: 12px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:active {
+            background: #242a32;
+        }
+
+        .secondary {
+            color: #8f98a4;
+            border-color: #343c46;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .clue {
+            line-height: 1.8;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #29313b;
+        }
+
+        .big {
+            font-size: 21px;
+            font-weight: bold;
+        }
+
+        #noButton {
+            transition: transform .15s ease;
+        }
+
+        .cursor::after {
+            content: "█";
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="terminal">
+
+    <!-- ЭКРАН 1 -->
+    <div id="screen1">
+        <div class="header">QUEST SYSTEM // v1.0</div>
+        <div class="title">Инициализация системы...</div>
+
+        <div id="log"></div>
+
+        <div class="progress-container">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <div class="percentage" id="percentage">0%</div>
+
+        <button id="continueButton" class="hidden" onclick="showConfirmation()">
+            ПРОДОЛЖИТЬ
+        </button>
+    </div>
+
+
+    <!-- ЭКРАН 2 -->
+    <div id="screen2" class="hidden">
+        <div class="header">QUEST SYSTEM // CONFIRMATION</div>
+
+        <div class="title">Требуется подтверждение</div>
+
+        <div class="status">
+            Вы действительно хотите продолжить поиск?
+        </div>
+
+        <button onclick="acceptQuest()">
+            ДА, Я ХОЧУ СВОЙ ПОДАРОК
+        </button>
+
+        <button
+            id="noButton"
+            class="secondary"
+            onclick="moveNoButton()">
+            НЕТ, МНЕ И ТАК НОРМАЛЬНО
+        </button>
+    </div>
+
+
+    <!-- ЭКРАН 3 -->
+    <div id="screen3" class="hidden">
+        <div class="header">QUEST SYSTEM // PROCESSING</div>
+
+        <div class="title cursor" id="processingText">
+            Обработка решения
+        </div>
+
+        <div id="processingLog"></div>
+    </div>
+
+
+    <!-- ЭКРАН 4 -->
+    <div id="screen4" class="hidden">
+        <div class="header">QUEST SYSTEM // STAGE UNLOCKED</div>
+
+        <div class="ok big">
+            НОВАЯ ПОДСКАЗКА РАЗБЛОКИРОВАНА
+        </div>
+
+        <div class="clue">
+
+            Следующее место обладает небольшим
+            <strong>кризисом идентичности.</strong>
+
+            <br><br>
+
+            Оно находится дома —
+            но одновременно как будто уже снаружи.
+
+            <br><br>
+
+            У него есть стены и окна,
+            но комнатой его обычно не считают.
+
+            <br><br>
+
+            Летом туда выйти — обычное дело.
+
+            <br><br>
+
+            Зимой сначала возникает вопрос:
+
+            <br><br>
+
+            <strong>«А мне точно туда надо?»</strong>
+
+        </div>
+    </div>
+
+</div>
+
+
+<script>
+
+const log = document.getElementById("log");
+const progress = document.getElementById("progress");
+const percentage = document.getElementById("percentage");
+
+function addLog(text, className = "") {
+    const div = document.createElement("div");
+    div.className = "status " + className;
+    div.innerHTML = text;
+    log.appendChild(div);
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function startSystem() {
+
+    await sleep(700);
+    addLog("> Запуск системы поиска...");
+
+    await sleep(800);
+    addLog("> Проверка участника... <span class='ok'>OK</span>");
+
+    await sleep(900);
+    addLog("> Загрузка истории прохождения...");
+
+    const values = [7, 18, 34, 51, 63, 76];
+
+    for (const value of values) {
+        await sleep(350);
+        progress.style.width = value + "%";
+        percentage.innerText = value + "%";
+    }
+
+    await sleep(700);
+
+    addLog("> Пройдено этапов: <strong>10</strong>");
+    
+    await sleep(500);
+
+    addLog("> Ошибок обнаружено: <strong>возможно</strong>");
+
+    await sleep(500);
+
+    addLog("> Попыток подкупить организатора: <strong>0</strong>");
+
+    await sleep(500);
+
+    addLog(
+        "> Уровень подозрительности происходящего: <strong>ВЫСОКИЙ</strong>",
+        "warning"
+    );
+
+    await sleep(900);
+
+    addLog(
+        "> Следующий этап: <strong>ЗАБЛОКИРОВАН</strong>",
+        "error"
+    );
+
+    await sleep(600);
+
+    document
+        .getElementById("continueButton")
+        .classList.remove("hidden");
+}
+
+
+function showConfirmation() {
+
+    document.getElementById("screen1").classList.add("hidden");
+    document.getElementById("screen2").classList.remove("hidden");
+
+}
+
+
+let noAttempts = 0;
+
+function moveNoButton() {
+
+    const button = document.getElementById("noButton");
+
+    noAttempts++;
+
+    const messages = [
+        "НЕТ, МНЕ И ТАК НОРМАЛЬНО",
+        "ТОЧНО НЕТ?",
+        "МОЖЕТ, ВСЁ-ТАКИ ПОДУМАТЬ?",
+        "ЭТА КНОПКА ЯВНО НЕ РАБОТАЕТ",
+        "ХВАТИТ НА МЕНЯ НАЖИМАТЬ"
+    ];
+
+    button.innerText =
+        messages[Math.min(noAttempts, messages.length - 1)];
+
+    const x = Math.floor(Math.random() * 100) - 50;
+    const y = Math.floor(Math.random() * 80) - 40;
+
+    button.style.transform =
+        `translate(${x}px, ${y}px)`;
+}
+
+
+async function acceptQuest() {
+
+    document.getElementById("screen2").classList.add("hidden");
+    document.getElementById("screen3").classList.remove("hidden");
+
+    const processingLog =
+        document.getElementById("processingLog");
+
+    await sleep(900);
+
+    processingLog.innerHTML =
+        "<div class='status'>> Решение принято.</div>";
+
+    await sleep(800);
+
+    processingLog.innerHTML +=
+        "<div class='status'>> Возможность передумать: <span class='error'>ОТКЛЮЧЕНА</span></div>";
+
+    await sleep(1000);
+
+    processingLog.innerHTML +=
+        "<div class='status'>> Генерация следующей подсказки...</div>";
+
+    await sleep(1500);
+
+    processingLog.innerHTML +=
+        "<div class='status ok'>> Подсказка готова.</div>";
+
+    await sleep(800);
+
+    document.getElementById("screen3").classList.add("hidden");
+    document.getElementById("screen4").classList.remove("hidden");
+
+}
+
+
+startSystem();
+
+</script>
+
+</body>
+</html>
